@@ -18,24 +18,27 @@ class TaskTracker(object):
             feature=self.do_task_feature,
             train=self.do_task_train,
             predict=self.do_task_predict)
-        input_data = [pickle.load(open(self._jt.get_data()))
+        input_data = [pickle.load(open(self._jt.get_data(i)['data']))
                       for i in task['input_keys']]
-        out = workables[task['type']](task, input_data)
-        pickle_fn = self._jt.get_data(task['output_keys'][0])
+        print(task['name'])
+        out = workables[task['name']](task, input_data)
+        pickle_fn = self._jt.get_data(task['output_keys'][0])['data']
         with open(pickle_fn, 'w') as fp:
             pickle.dump(out, fp, -1)
+        self._jt.get_data(task['output_keys'][0])['state'] = 'ready'
 
     def do_task_feature(self, task, input_data):
         name_images, = input_data
         out = []
-        for name, image in name_images:
-            image = Image.load(StringIO.StringIO(image))
-            feat = imfeat.histogram_joint.make_feature(image)[0]
+        for name, image in name_images[:10]:
+            image = Image.open(StringIO.StringIO(image))
+            feat = imfeat.histogram_joint.make_features(image)[0]
             out.append((name, feat))
         return out
 
     def do_task_train(self, task, input_data):
         name_features, name_gts = input_data
+        name_gts = dict(name_gts)
         class_data = {}  # [class_name] = [(label, value) ...]
         for name, feature in name_features:
             poss, negs = name_gts[name]
@@ -44,9 +47,9 @@ class TaskTracker(object):
             for neg in negs:
                 class_data.setdefault(neg, []).append((-1, feature))
         out = []
-        for class_name, data in class_data:
+        for class_name, data in class_data.items():
             s = classipy.SVMLinear(options=task['params']).train(data)
-            s.append((class_name, s.dumps()))
+            out.append((class_name, s.dumps()))
         return out
 
     def do_task_predict(self, task, input_data):

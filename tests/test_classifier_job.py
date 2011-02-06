@@ -7,12 +7,13 @@ class Tets(unittest.TestCase):
 
     def setUp(self):
         self._jt = cvisws.JobTracker()
+        self._tt = cvisws.TaskTracker(self._jt)
         self._u = 'user'
 
     def test_classifier_job(self):
-        im_train_url = "im_train"
-        im_test_url = "im_test"
-        gt_url = "groundtruth"
+        im_train_url = "/home/brandyn/playground/cvisws_test0/train_images.pkl"
+        im_test_url = "/home/brandyn/playground/cvisws_test0/test_images.pkl"
+        gt_url = "/home/brandyn/playground/cvisws_test0/train_gt.pkl"
 
         # Set up all the input/output data nodes
         key_im_train = self._jt.create_data_input(self._u, im_train_url)
@@ -28,14 +29,21 @@ class Tets(unittest.TestCase):
                                 [key_im_train], [key_feat_train])
 
         tkey_feat_test = self._jt.create_task(self._u, 'feature', {},
-                                [key_im_test], [key_im_test])
+                                [key_im_test], [key_feat_test])
 
         tkey_train = self._jt.create_task(self._u, 'train', {},
                                 [key_feat_train, key_gt], [key_classifier])
 
         tkey_predict = self._jt.create_task(self._u, 'predict', {},
-                                [key_classifier, key_feat_test], [key_predict])
-
+                                [key_feat_test, key_classifier], [key_predict])
+        while 1:
+            try:
+                self._tt.do_work()
+            except TypeError, e:
+                print(e)
+                break
+        print(self._jt.get_data(key_predict)['data'])
+        return
         # Wait patiently for jobs to complete
         tkeys = [tkey_feat_train, tkey_feat_test, tkey_train, tkey_predict]
         for tkey in tkeys:

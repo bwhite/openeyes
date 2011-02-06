@@ -1,5 +1,6 @@
 import random
 import time
+import tempfile
 
 
 class JobTracker(object):
@@ -46,8 +47,10 @@ class JobTracker(object):
             Opaque data key (str)
         """
         k = str(random.random())
+        f = tempfile.NamedTemporaryFile(delete=False)
         self._data_map[k] = {'type': 'default',
                              'state': None,
+                             'data': f.name,
                              'user': user}
         return k
 
@@ -115,7 +118,7 @@ class JobTracker(object):
             pass
         else:
             t[1]['state'] = 'running', worker_key
-            return t
+            return t[1]
 
     def get_data(self, input_key):
         """
